@@ -1,0 +1,78 @@
+import sys, time
+from master import Master
+from client import GFSClient
+from ProcessMonitor import ProcessMonitor
+config(channel is fifo, clock is lamport)
+
+def main():
+
+    processMon = new(ProcessMonitor)
+    setup(processMon, ())
+    start(processMon)
+    output('PMON started')
+
+    master1 = new(Master)
+    setup(master1, ())
+    start(master1)
+    client1 = new(GFSClient)
+    setup(client1, (master1,processMon))
+    start(client1)
+    client2 = new(GFSClient)
+    setup(client2, (master1,processMon))
+    start(client2)
+    client3 = new(GFSClient)
+    setup(client3, (master1,processMon))
+    start(client3)
+    client4 = new(GFSClient)
+    setup(client4, (master1,processMon))
+    start(client4)
+    client5 = new(GFSClient)
+    setup(client5, (master1,processMon))
+    start(client5)
+    s1 = 'Hi testing 12'
+    s2 = 'Hi testing 456'
+    fileName = 'abc.txt'
+    
+    send(('CREATE_MSG', fileName), to=client1)
+    await(some(received(('CREATED', fileName2)), has=fileName == fileName2))
+    
+    send(('WRITE_MSG', fileName, s1), to=client1)
+    await(some(received(('WRITTEN', fileName2)),has=fileName == fileName2))
+    
+    s2 = 'Append1232'
+    send(('RECORD_APPEND_MSG', 'abc.txt', s2), to=client1)
+    s2 = 'Append2'
+    send(('RECORD_APPEND_MSG', 'abc.txt', s2), to=client2)
+    '''
+    s2 = 'Append3'
+    send(('RECORD_APPEND_MSG', 'abc.txt', s2), to=client3)
+    s2 = 'Appending 1111'
+    send(('RECORD_APPEND_MSG', 'abc.txt', s2), to=client4)
+    time.sleep(2)
+    send(('CREATE_SNAPSHOT', 'abc.txt'), to = client1)
+    s2 = 'Appending 555'
+    #send(('RECORD_APPEND_MSG', 'abc.txt', s2), to=client5)
+    '''
+    
+    send(('CREATE_SNAPSHOT', 'abc.txt'), to = client3)
+    time.sleep(2)
+    c =logical_clock()
+    send(('READ_MSG',c, 'abc.txt'), to=client1) 
+    await(some(received(('READ_FILE_DONE',dataRead,fileName2, c2)), 
+                                    has=fileName == fileName2 and c2>c))
+    output('THIS IS THE DATA READ!!!!!',dataRead)
+    '''
+    c=logical_clock()
+
+    send(('KILL_CHUNKSERVER',c), to=client2)
+    await(some(received(('KILL',chunkServer,c2)), 
+                                    has=c2>c))
+    
+    time.sleep(3)
+    '''
+    #send(('PRINT_MONITOR', ), to=processMon)   
+    
+
+    send(('DELETE','abc.txt'), to = client1)
+    await(received(('DONE',)))
+    
